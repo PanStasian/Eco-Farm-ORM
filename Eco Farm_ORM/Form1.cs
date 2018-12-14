@@ -10,15 +10,21 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data.Entity.Core.Objects;
 using System.Data.Entity.Infrastructure;
+using System.Data.Entity.Core.EntityClient;
+using System.Data.Common;
 
 namespace Eco_Farm_ORM
 {
     public partial class Form1 : Form
     {
+        public EntityConnection Econ;
+        public EntityCommand Ecmd;
         EcoFarmEntities ef = new EcoFarmEntities();
         public Form1()
         {
             InitializeComponent();
+            //Form2 form2 = new Form2();
+            //form2.Show();
         }
 
         private void select_pos_code_Click(object sender, EventArgs e)
@@ -40,23 +46,54 @@ namespace Eco_Farm_ORM
         private void EntSQL_Click(object sender, EventArgs e)
         {
             int param;
-            SqlParameter parameterSql = new SqlParameter();
-            parameterSql.ParameterName = "@Parameter";
             bool ParamType = int.TryParse(paramming.Text, out param);
-            parameterSql.Value = paramming.Text;
-            dataGridView1.DataSource = ef.Database.SqlQuery<Employees>("SELECT * FROM Employees where Position_Code=@Parameter", parameterSql).ToList();
+            Econ = new EntityConnection("Name=EcoFarmEntities");
+            Econ.Open();
+            Ecmd = Econ.CreateCommand();
+            Ecmd.Parameters.AddWithValue("Parameter", param);
+            Ecmd.CommandText = "SELECT VALUE e FROM EcoFarmEntities.Employees as e WHERE e.Position_Code=@Parameter";
+            DbDataReader DbRead = Ecmd.ExecuteReader(CommandBehavior.SequentialAccess);
+            dataGridView1.Columns.Add("column", "Employee Number");
+            dataGridView1.Columns.Add("column", "Name");
+            dataGridView1.Columns.Add("column", "Phone");
+            dataGridView1.Columns.Add("column", "Adress");
+            dataGridView1.Columns.Add("column", "Position Code");
+            dataGridView1.Columns.Add("column", "Passport Number");
+            dataGridView1.Columns.Add("column", "Passport Series");
+            dataGridView1.Columns.Add("column", "Birth");
+            while (DbRead.Read())
+            {
+                dataGridView1.Rows.Add(
+                    DbRead["Employee_Number"].ToString(),
+                    DbRead["Full_Name"].ToString(),
+                    DbRead["Phone_Number"].ToString(),
+                    DbRead["Adress"].ToString(),
+                    DbRead["Position_Code"].ToString(),
+                    DbRead["Passport_Number"].ToString(),
+                    DbRead["Passport_Series"].ToString(),
+                    DbRead["Birth_Date"].ToString()
+                    );
+            }
+            DbRead.Close();
+            Econ.Close();
         }
 
         private void ObjQuery_Click(object sender, EventArgs e)
         {
             //string con = ef.Database.Connection.ConnectionString;
             ObjectContext context = (new EcoFarmEntities() as IObjectContextAdapter).ObjectContext;
-            context.DefaultContainerName = "EcoFarmEntities";
+            //context.DefaultContainerName = "EcoFarmEntities";
             ObjectParameter param = new ObjectParameter("Parameter", comboBox1.SelectedItem.ToString());
             string command = "SELECT VALUE p FROM Position as p WHERE p.Position1=@Parameter";
             ObjectQuery<Position> objQuery = context.CreateQuery<Position>(command, param);
             var result = objQuery.ToList();
             dataGridView1.DataSource = result;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Form2 form2 = new Form2();
+            form2.Show();
         }
     }
 }
